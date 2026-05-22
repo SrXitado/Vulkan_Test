@@ -1,0 +1,13 @@
+Camadas de Validação:
+
+A API VULKAN é projetada para uma sobrecarga minima no driver, e uma das consequencias disso é a verificacao
+de erros muito limitada por padrão. Erros simples como passar ponteiros nulos para parametros obrigatorios,
+geralmente eles nao sao tratados esplicitamente e resultam em falhas ou "undefined behavior".
+Porem, não impede que verificações não possam ser adicionadas a API. O Vulkan proporciona um sistema
+chamado "validation layers". Elas são componentes opcionais e adicionam operações extras, como:
+
+Verificar os valores dos parâmetros em relação à especificação para detectar uso indevido;
+Rastrear a criação e destruição de objetos para encontrar vazamentos de recursos;
+Verificar a segurança de threads rastreando as threads de origem das chamadas;
+Registrar cada chamada e seus parâmetros na saída padrão;
+Rastrear chamadas Vulkan para criação de perfil e reprodução.
