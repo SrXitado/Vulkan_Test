@@ -1,13 +1,51 @@
+Por que Vulkan?
+APIs de alto nivel como o OpenGl, o driver faz diversas coisas por baixo dos panos, como alocação de memoria,
+sincronizando comandos e gerenciando os pipelines. Se as coisas quebrarem, voce nao faz a minima ideia do porque.
+Vulkan é uma API verbosa e joga toda a responsabilidade em voce, é mais dificl mas te dá total controle - sem bugs
+misteriosos, sem drops de performance aleatorios
+
+Texto Original :
+Explicit Control Over Memory and Synchronization
+With OpenGL, the driver does a lot of stuff behind the scenes — allocating memory, syncing commands, and managing pipelines. Sounds good, right? Not really. Because when things break, you have no idea why.
+Vulkan throws all that responsibility at you.
+
+It’s harder to learn but gives you full control — no mysterious bugs, no random performance drops. Once you master it, Vulkan feels like a precision instrument.
+
 Camadas de Validação:
+
+APIs de alto nivel como o OpenGl, o driver faz diversas coisas por baixo dos panos, como alocação de memoria,
+sincronizando comandos e gerenciando os pipelines. Se as coisas quebrarem, voce nao faz a minima ideia do porque.
+Vulkan é uma API verbosa e joga toda a responsabilidade em voce, é mais dificl m
 
 A API VULKAN é projetada para uma sobrecarga minima no driver, e uma das consequencias disso é a verificacao
 de erros muito limitada por padrão. Erros simples como passar ponteiros nulos para parametros obrigatorios,
-geralmente eles nao sao tratados esplicitamente e resultam em falhas ou "undefined behavior".
+geralmente eles não são tratados esplicitamente e resultam em falhas ou "undefined behavior".
 Porem, não impede que verificações não possam ser adicionadas a API. O Vulkan proporciona um sistema
 chamado "validation layers". Elas são componentes opcionais e adicionam operações extras, como:
 
-Verificar os valores dos parâmetros em relação à especificação para detectar uso indevido;
-Rastrear a criação e destruição de objetos para encontrar vazamentos de recursos;
-Verificar a segurança de threads rastreando as threads de origem das chamadas;
-Registrar cada chamada e seus parâmetros na saída padrão;
-Rastrear chamadas Vulkan para criação de perfil e reprodução.
+- Verificar os valores dos parâmetros em relação à especificação para detectar uso indevido;
+- Rastrear a criação e destruição de objetos para encontrar vazamentos de recursos;
+- Verificar a segurança de threads rastreando as threads de origem das chamadas;
+- Registrar cada chamada e seus parâmetros na saída padrão;
+- Rastrear chamadas Vulkan para criação de perfil e reprodução.
+
+Bandeiras de aviso :
+
+VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: Mensagem diagnostica
+VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: mensagem de informacao como a criacao de um recurso
+VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: Mensagem sobre o comportamento e não é necessariamente um erro,
+mas bem provavel de um erro na aplicacao
+VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: Mensagem sobre os comportamentos e bem provavel de causar crashes
+
+Tipos de Mensagens :
+
+VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT: Algum evento aconteceu que nao tem relação com a especificacao com performance
+VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT: Alguma coisa aconteceu que viola a especificacao ou indica um possivel
+erro do programador
+VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: Potencialmente um uso indevido do Vulkan
+
+Detalhes da Mensagem :
+
+pMessage : Inclui a mensagem de debug que termina em nulo
+pObjects : Array de objetos Vulkan que estão relacionados com a mensagem
+objectCount : Numero de objetos na array

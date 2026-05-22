@@ -1,0 +1,2 @@
+https://vulkan-tutorial.com/Introduction
+https://medium.com/fossible/why-vulkan-is-better-but-you-might-want-opengl-anyway-f797cf9cfaea

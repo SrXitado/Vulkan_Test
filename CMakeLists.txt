@@ -16,6 +16,8 @@ set(CMAKE_CXX_STANDARD 26)
 
 add_executable(FirstProject main.cpp
         src/HelloTriangleApplication.cpp
+        esqueleto.cpp
+        HelloTriangleApplication.cpp
 )
 
 target_link_libraries(FirstProject

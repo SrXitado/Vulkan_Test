@@ -12,6 +12,42 @@
 #include <cstring>
 #include <vector>
 
+
+const uint32_t WIDTH = 800; // largura da janela
+const uint32_t HEIGHT = 600; // altura da janela
+
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+    // especificar se as camadas devem ou nao ser ativadas
+    // com base se é release ou debug
+#ifdef NDEBUG //"not debug"
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+
+// cuida dos callbacks de debug
+// essa funcao nao roda automaticamente pois é uma funcao de extensao
+// agora ela vai rodar de fundo
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+    } else {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+
+// destruidor do mensageiro
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr) {
+        func(instance, debugMessenger, pAllocator);
+    }
+}
+
 class HelloTriangleApplication {
 public:
     void run() {
@@ -29,26 +65,47 @@ public:
 private:
     GLFWwindow* window; // cria o objeto janela
 
-    const uint32_t WIDTH = 800; // largura da janela
-    const uint32_t HEIGHT = 600; // altura da janela
+    VkInstance instance;    // declara a variavel da instancia
+    VkDebugUtilsMessengerEXT debugMessenger;
 
-    const std::vector<const char*> validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
+    void initWindow() {
+        // inicia a biblioteca
+        glfwInit();
 
-    // especificar se as camadas devem ou nao ser ativadas
-    // com base se é release ou debug
-    #ifdef NDEBUG //"not debug"
-    const bool enableValidationLayers = false;
-    #else
-    const bool enableValidationLayers = true;
-    #endif
+        // o glfw cria janelas em Vulkan e em OpenGL
+        // precisa tornar explicito que quero apenas o vulkan
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    VkInstance instance;
-
+        // cria a janela
+        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+    }
     void initVulkan() {
         // cria uma instancia do Vulkan
         createInstance();
+        setupDebugMessenger();
+    }
+
+    void mainLoop() {
+
+        // se a janela nao deve fechar
+        // seja por erros ou por input do usuario
+        // ela nao vai
+        while (!glfwWindowShouldClose(window)) {
+            glfwPollEvents();
+        }
+
+    }
+
+    void setupDebugMessenger() {
+        if (!enableValidationLayers) return;
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo;
+        populateDebugMessengerCreateInfo(createInfo);
+
+        if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+            throw std::runtime_error("falha ao criar um mensageiro de debug!");
+        }
     }
 
     bool checkValidationLayerSupport() {
@@ -78,6 +135,34 @@ private:
         return true;
     }
 
+    // essa e uma funcao de "debug callback"
+    // sempre que der erro, essa funcao é chamada e retorna os dados do erro
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,     // a gravidade da mensagem/bandeiras de aviso
+    VkDebugUtilsMessageTypeFlagsEXT messageType,                // o tipo da mensagem
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,  // contem detalhes da mensagem
+    void* pUserData) {
+
+        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+        return VK_FALSE;
+    }
+
+    // essa funcao vai retornar a lista de extensoes obrigatorias baseada
+    // se as camdas de validacao estao ativas ou nao
+    std::vector<const char*> getRequiredExtensions() {
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions;
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+        if (enableValidationLayers) {
+            extensions.push_back("VK_EXT_debug_utils");
+        }
+
+        return extensions;
+    }
     void createInstance() {
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("Camadas de validacao inqueridas, mas nao disponiveis!");
@@ -100,53 +185,53 @@ private:
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
 
-        // numero de extensoes e as extensoes
         // vulkan e uma api agnostica (multi linguagem/ plataforma)
         // entao precisa de extensoes para intermediar com o sistema de janelas
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        createInfo.enabledExtensionCount = glfwExtensionCount;
-        createInfo.ppEnabledExtensionNames = glfwExtensions;
+        auto extensions = getRequiredExtensions();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.ppEnabledExtensionNames = extensions.data();
 
         createInfo.enabledLayerCount = 0;
+
+        // faz debug da criacao e destruicao da instancia
+        // faz debug da criacao e destruicao da instancia
+        VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+        if (enableValidationLayers) {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+
+            populateDebugMessengerCreateInfo(debugCreateInfo);
+            createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
+        } else {
+            createInfo.enabledLayerCount = 0;
+
+            createInfo.pNext = nullptr;
+        }
+
 
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
             throw std::runtime_error("falha ao criar uma instancia!");
         }
     }
 
-    void initWindow() {
-        // inicia a biblioteca
-        glfwInit();
-
-        // o glfw cria janelas em Vulkan e em OpenGL
-        // precisa tornar explicito que quero apenas o vulkan
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-        // cria a janela
-        window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-    }
-
-    void mainLoop() {
-
-        // se a janela nao deve fechar
-        // seja por erros ou por input do usuario
-        // ela nao vai
-        while (!glfwWindowShouldClose(window)) {
-            glfwPollEvents();
-        }
-
+    // faz debug da criacao e destruicao
+    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+        createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        createInfo.pfnUserCallback = debugCallback;
     }
 
     // faz uma limpeza na hora de sair/fechar
     void cleanup() {
-
-        glfwDestroyWindow(window);
+        if (enableValidationLayers) {
+            DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+        }
 
         vkDestroyInstance(instance, nullptr);
+
+        glfwDestroyWindow(window);
 
         glfwTerminate();
     }
