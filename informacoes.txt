@@ -57,7 +57,7 @@ ja pensando nisso e na forma de como ele vai escolher a GPU.
 
 Vulkan fornece o "dispositivo lógico", ele intermedia as interações com a GPU e o código de fato.
 
-4 - Filas
+4 - Filas (ou pendencias)
 
 Quase todas as operações um Vulkan são feitas em filas, seja carregar uma textura, fazer um comando ou renderizando.
 Por exemplo : uma fila que pertence a familia que apenas processa comandos do computador ou uma que permite

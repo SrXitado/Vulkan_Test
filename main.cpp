@@ -51,6 +51,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
+// que cuida dos indices das filas
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
 
@@ -83,6 +84,8 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
 
+    VkQueue graphicsQueue;  // fila grafica
+
     void initWindow() {
         // inicia a biblioteca
         glfwInit();
@@ -100,7 +103,7 @@ private:
         createInstance();
         setupDebugMessenger();
         pickPhysicalDevice(); // seleciona a placa de video
-        //createLogicalDevice(); // cria um dispositivo logico
+        createLogicalDevice(); // cria um dispositivo logico
     }
 
     void mainLoop() {
@@ -308,7 +311,7 @@ private:
         return indices;
     }
 
-    /*
+
     // aqui inicia a criacao do dispositivo lógico
     void createLogicalDevice() {
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
@@ -323,11 +326,55 @@ private:
         // indicando que quero apenas a fila grafica
         queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
         queueCreateInfo.queueCount = 1;
+
+        // os drivers de hoje me dia deixa criar apenas um numero pequeno de filas para cada familia de filas
+        // mas nao precisa criar mais de uma, ja que voce pode criar os comandos utilizando multiplas threads
+        // e depois jogar tudo para a thread principal com um "low-overhead call" ou chamada de baixa sobrecarga
+        // Vulkan deixa voce gerenciar as prioridades das filas com numeros flutuantes entre 0.0 e 1.0. É obrigatorio
+        // mesmo apenas com uma fila
+        float queuePriority = 1.0f;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+
+        // especificar qual caracteristicas vamos usar (como sombreadores de geometria)
+        VkPhysicalDeviceFeatures deviceFeatures{};
+
+        // agora podemos preencher a struct VkDeviceCreateInfo
+        VkDeviceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+        createInfo.pQueueCreateInfos = &queueCreateInfo;
+        createInfo.queueCreateInfoCount = 1;
+
+        createInfo.pEnabledFeatures = &deviceFeatures;
+        // parece a mesma coisa que usamos nas camadas de validação, porem agora é especifica para cada dispositivo
+        // um exemplo é a extensão VK_KHR_swapchain, ela permite apresentarmos imagens renderizadas em uma janela
+        // MAS, é possivel que um dispositivo nao tenha essa habilidade por que por exemplo : só suporta computar
+        // informações
+
+        createInfo.enabledExtensionCount = 0;
+
+        if (enableValidationLayers) {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+        } else {
+            createInfo.enabledLayerCount = 0;
+        }
+
+        if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create logical device!");
+        }
+
+        // podemos usar a função vkGetDeviceQueue para recuperar os identificadores de fila para cada familia de filas
+        // os parametros são o dispositivo logico, familia de fila, indice da fila e um ponteiro para a variavel
+        // armazenada o identificador da fila. Como estamos criando apenas uam fila dessa familia, vamos usar o 0
+        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
     }
-    */
+
 
     // faz uma limpeza na hora de sair/fechar
     void cleanup() {
+        vkDestroyDevice(device, nullptr);
+
         if (enableValidationLayers) {
             DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
