@@ -12,6 +12,9 @@
 #include <cstring>
 #include <vector>
 
+// ele faz uma variavel nao conter nenhum tipo de valor até atribuir algo a ela
+#include <optional>
+
 
 const uint32_t WIDTH = 800; // largura da janela
 const uint32_t HEIGHT = 600; // altura da janela
@@ -48,6 +51,15 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+
+    bool isComplete() {
+        return graphicsFamily.has_value();
+    }
+};
+
+
 class HelloTriangleApplication {
 public:
     void run() {
@@ -66,7 +78,10 @@ private:
     GLFWwindow* window; // cria o objeto janela
 
     VkInstance instance;    // declara a variavel da instancia
-    VkDebugUtilsMessengerEXT debugMessenger;
+    VkDebugUtilsMessengerEXT debugMessenger;    // variavel do mensageiro de debug
+
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device;
 
     void initWindow() {
         // inicia a biblioteca
@@ -84,6 +99,8 @@ private:
         // cria uma instancia do Vulkan
         createInstance();
         setupDebugMessenger();
+        pickPhysicalDevice(); // seleciona a placa de video
+        //createLogicalDevice(); // cria um dispositivo logico
     }
 
     void mainLoop() {
@@ -97,6 +114,7 @@ private:
 
     }
 
+    // dá inicio ao mensageiro de debug
     void setupDebugMessenger() {
         if (!enableValidationLayers) return;
 
@@ -121,7 +139,7 @@ private:
             bool layerFound = false;
 
             for (const auto& layerProperties : availableLayers) {
-                if (strcmp(layerName, layerProperties.layerName) == 0) {
+                if (strcmp(layerName, layerProperties.layerName) == 0) { // compara a string com os nomes
                     layerFound = true;
                     break;
                 }
@@ -164,6 +182,7 @@ private:
         return extensions;
     }
     void createInstance() {
+        // checa se vai ou nao ativar as camadas de validacao
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("Camadas de validacao inqueridas, mas nao disponiveis!");
         }
@@ -208,7 +227,7 @@ private:
             createInfo.pNext = nullptr;
         }
 
-
+        // apenas checa se foi possivel criar uma instancia, senão ele cria um erro
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
             throw std::runtime_error("falha ao criar uma instancia!");
         }
@@ -222,6 +241,90 @@ private:
         createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
     }
+
+    // basicamente ele seleciona a placa de video que sera utilizada
+    void pickPhysicalDevice() {
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+        if (deviceCount == 0) {
+            throw std::runtime_error("falhou em achar GPUs com suporte a Vulkan!");
+        }
+
+        // array para alocar todos os VkPhysicalDevice/GPU
+
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+        for (const auto& device : devices) {
+            if (isDeviceSuitable(device)) {
+                physicalDevice = device;
+                break;
+            }
+        }
+
+        // checa de a GPU é nula/nao existe
+        if (physicalDevice == VK_NULL_HANDLE) {
+            throw std::runtime_error("failed to find a suitable GPU!");
+        }
+    }
+
+    // poderia adicionar algo como um benchmark para determinar qual GPU é mais eficiente
+    // porem isso demandaria muito tempo e geralmente as pessoas tem 1 GPU (integrada ou extena)
+    // então retorno "true" aceitando qualquer placa de video
+    bool isDeviceSuitable(VkPhysicalDevice device) {
+        QueueFamilyIndices indices = findQueueFamilies(device);
+
+        return indices.isComplete();
+    }
+
+    // acha a familia das filas
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+        QueueFamilyIndices indices;
+
+        // propriedades de fila no dispositivo
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+        // a struct VkQueueFamilyProperties possui detalhes dos tipos de operação que são suportadas
+        // e o numero de filas que podemos fazer baseado nessa familia
+        // quero achar uma delas que suporta o VK_QUEUE_GRAPHICS_BIT
+        int i = 0;
+        for (const auto& queueFamily : queueFamilies) {
+            if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                indices.graphicsFamily = i;
+            }
+
+            if (indices.isComplete()) {
+                break;
+            }
+
+
+            i++;
+        }
+
+        return indices;
+    }
+
+    /*
+    // aqui inicia a criacao do dispositivo lógico
+    void createLogicalDevice() {
+        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+
+        // essa struct descreve o numero de filas que queremos, portanto
+        // vou utilizar apenas a fila com capacidades graficas
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+
+        // declarando que estou usando para criar uma fila de um dispositivo
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        // indicando que quero apenas a fila grafica
+        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+        queueCreateInfo.queueCount = 1;
+    }
+    */
 
     // faz uma limpeza na hora de sair/fechar
     void cleanup() {

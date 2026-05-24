@@ -11,7 +11,7 @@ Vulkan throws all that responsibility at you.
 
 It’s harder to learn but gives you full control — no mysterious bugs, no random performance drops. Once you master it, Vulkan feels like a precision instrument.
 
-Camadas de Validação:
+2 - Camadas de Validação:
 
 APIs de alto nivel como o OpenGl, o driver faz diversas coisas por baixo dos panos, como alocação de memoria,
 sincronizando comandos e gerenciando os pipelines. Se as coisas quebrarem, voce nao faz a minima ideia do porque.
@@ -49,3 +49,16 @@ Detalhes da Mensagem :
 pMessage : Inclui a mensagem de debug que termina em nulo
 pObjects : Array de objetos Vulkan que estão relacionados com a mensagem
 objectCount : Numero de objetos na array
+
+3 - Dispositivos
+
+O Vulkan requere que voce espeficique qual ou quais GPUs voce quer usar, por isso o programador tem que fazer o código
+ja pensando nisso e na forma de como ele vai escolher a GPU.
+
+Vulkan fornece o "dispositivo lógico", ele intermedia as interações com a GPU e o código de fato.
+
+4 - Filas
+
+Quase todas as operações um Vulkan são feitas em filas, seja carregar uma textura, fazer um comando ou renderizando.
+Por exemplo : uma fila que pertence a familia que apenas processa comandos do computador ou uma que permite
+apenas coisas relacionadas a memoria serem feitas

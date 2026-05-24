@@ -1,0 +1,4 @@
+uint32_t = Unsigned INTeger 32 bits standard integer type
+Unsigned: Nao armazena numeros negativos
+32 bits: o int utilizara 4 bytes de tamanho
+_t : mantem o tamanho identico para qualquer computador ou compilador
